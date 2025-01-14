@@ -15,19 +15,37 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Autoconfig page.
  *
- * @package     local_configws
+ * @package     local_confiws
  * @copyright   2024 Softhouse
  * @author      Oscar Nadjar <oscar.nadjar@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+use local_configws\form\autoconfig_form;
 
-$plugin->version = 2024100800;
-$plugin->requires = 2022112814;
-$plugin->release = '1.0.0';
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->component = 'local_configws';
-$plugin->supported = [401, 405];
+// Requirements.
+require_once(__DIR__ . '/../../config.php');
+require_once($CFG->libdir . '/adminlib.php');
+
+// External page setup.
+admin_externalpage_setup('local_configws_autoconfig');
+
+$PAGE->set_heading(get_string('autoconfig', 'local_configws'));
+
+// Page configuration.
+$baseurl = new moodle_url('/local/configws/autoconfig.php');
+
+$autoconfigform = new autoconfig_form();
+
+// Call AMD.
+$PAGE->requires->js_call_amd(
+    'local_configws/autoconfig',
+    'init',
+    [autoconfig_form::class]
+);
+// Render output.
+echo $OUTPUT->header();
+
+echo $OUTPUT->footer();
