@@ -3,7 +3,12 @@ import Config from 'core/config';
 import {get_string as getString} from 'core/str';
 
 export const init = (formClass) => {
-    renderModal(formClass);
+    let button = document.querySelector('[data-action="autoconfig-form"]');
+    button.addEventListener('click', async (e) => {
+        e.preventDefault();
+        let target = e.currentTarget;
+        renderModal(formClass, false, false,target);
+    });
 };
 
 /**
@@ -12,9 +17,10 @@ export const init = (formClass) => {
  * @param {string} formClass
  * @param {int} user
  * @param {int} webservice
+ * @param {object} target
  * @returns {void}
 */
-async function renderModal(formClass, user = false, webservice = false) {
+async function renderModal(formClass, user = false, webservice = false, target = false) {
     const form = new ModalForm({
         formClass,
         args: {
@@ -25,6 +31,7 @@ async function renderModal(formClass, user = false, webservice = false) {
             title: getString('autoconfig', 'local_configws'),
         },
         saveButtonText: 'Save',
+        returnFocus: target
     });
     form.addEventListener(form.events.FORM_SUBMITTED, (e) => {
         const response = e.detail;
@@ -68,7 +75,7 @@ async function renderModal(formClass, user = false, webservice = false) {
         }
     });
 
-            // Start observing the body for mutations
+    // Start observing the body for mutations
     observer.observe(bodymodal, { childList: true, subtree: true });
 
     const wsobserver = new MutationObserver((mutationsList, observer) => {
@@ -88,7 +95,7 @@ async function renderModal(formClass, user = false, webservice = false) {
                     return;
                 }
                 form.modal.destroy();
-                renderModal(formClass, userid, e.target.value);
+                renderModal(formClass, userid, e.target.value, target);
             });
         }
     }

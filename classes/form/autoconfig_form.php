@@ -54,16 +54,18 @@ class autoconfig_form extends dynamic_form {
         global $DB;
         $data = $this->get_data();
 
+        $lowercasews = strtolower($data->webservicename);
+        $shortname = preg_replace('/[^a-z0-9]/', '', $lowercasews);
         $user = $data->user;
         $webservice = $data->webservice;
-        $wsshortname = $data->wsshortname;
         $webservicename = $data->webservicename;
-        $rolename = $data->rolename;
-        $roleshortname = $data->roleshortname;
+        $rolename = $data->webservicename;
+        $roleshortname = $shortname;
+        $wsshortname = $shortname;
         $capability = $data->capability;
-        $enabled = $data->enabled;
-        $candownload = $data->candownload;
-        $canupload = $data->canupload;
+        $enabled = !empty($data->enabled) ? 1 : 0;
+        $candownload = !empty($data->candownload) ? 1 : 0;
+        $canupload = !empty($data->canupload) ? 1 : 0;
         $functions = $data->functions;
 
         if (empty($webservice) || $webservice == 'new') {
@@ -95,10 +97,12 @@ class autoconfig_form extends dynamic_form {
         }
 
         if (!$DB->record_exists('role', ['shortname' => $roleshortname])) {
-            $roleid = create_role($roleshortname, $rolename, $rolename);
+            $roleid = create_role($rolename, $shortname, '');
         } else {
             $roleid = $DB->get_field('role', 'id', ['shortname' => $roleshortname]);
         }
+        $context = \context_system::instance();
+        role_assign($roleid, $user, $context->id);
 
         if (!empty($capabilities)) {
             $webserviceobj = $DB->get_record('external_services', ['id' => $webserviceid]);
@@ -119,7 +123,19 @@ class autoconfig_form extends dynamic_form {
                 $DB->insert_record('external_services_functions', ['externalserviceid' => $webserviceid, 'functionname' => $funtionaname]);
             }
         }
-        
+        $token = $DB->get_field('external_tokens', 'token', ['userid' => $user, 'externalserviceid' => $webserviceid]);
+        if (empty($token)) {
+            $token = \core_external\util::generate_token(
+                EXTERNAL_TOKEN_PERMANENT,
+                \core_external\util::get_service_by_id($webserviceid),
+                $user,
+                \context_system::instance(),
+                0,
+                '',
+                ''
+            );
+        }
+
         return [ 'success' => true ];
     }
 
@@ -172,17 +188,18 @@ class autoconfig_form extends dynamic_form {
         $mform->addElement('select', 'webservice', get_string('webservice', 'local_configws'), $wsoptions);
         $mform->disabledIf('webservice', 'user', 'eq', 0);
 
-        $mform->addElement('text', 'wsshortname', get_string('wsshortname', 'local_configws'), []);
-        $mform->setType('wsshortname', PARAM_TEXT);
-        $mform->hideIf('wsshortname', 'webservice', 'eq', 0);
-        $mform->disabledIf('wsshortname', 'webservice', 'noteq', 'new');
-        $mform->setDefault('wsshortname', $wsinfo->shortname ?? '');
-
         $mform->addElement('text', 'webservicename', get_string('webservicename', 'local_configws'), []);
         $mform->setType('webservicename', PARAM_TEXT);
         $mform->disabledIf('webservicename', 'webservice', 'noteq','new');
         $mform->hideIf('webservicename', 'webservice', 'eq', 0);
         $mform->setDefault('webservicename', $wsinfo->name ?? '');
+
+        $mform->addElement('text', 'wsshortname', get_string('wsshortname', 'local_configws'), []);
+        $mform->setType('wsshortname', PARAM_TEXT);
+        $mform->hideIf('wsshortname', 'webservice', 'eq', 0);
+        $mform->hideIf('wsshortname', 'webservice', 'eq', 'new');
+        $mform->disabledIf('wsshortname', 'webservice', 'noteq', value: -1);
+        $mform->setDefault('wsshortname', $wsinfo->shortname ?? '');
 
         $token = $DB->get_field('external_tokens', 'token', ['userid' => $selecteduser, 'externalserviceid' => $selectedws]);
         $mform->addElement('text', 'token', get_string('token', 'local_configws'));
@@ -196,10 +213,18 @@ class autoconfig_form extends dynamic_form {
         $mform->addElement('text', 'rolename', get_string('rolename', 'local_configws'));
         $mform->setType('rolename', PARAM_TEXT);
         $mform->hideIf('rolename', 'webservice', 'eq', 0);
+        $mform->hideIf('rolename', 'webservice', 'eq', 'new');
+        $mform->setDefault('rolename', $wsinfo->name ?? '');
+        $mform->disabledIf('rolename', 'webservice', 'noteq',  -1);
 
         $mform->addElement('text', 'roleshortname', get_string('roleshortname', 'local_configws'));
         $mform->setType('roleshortname', PARAM_ALPHANUMEXT);
         $mform->hideIf('roleshortname', 'webservice', 'eq', 0);
+        $mform->hideIf('roleshortname', 'webservice', 'eq', 'new');
+
+        $mform->setDefault('roleshortname', $wsinfo->shortname ?? '');
+        $mform->disabledIf('roleshortname', 'webservice', 'noteq', -1);
+
 
         $capoptions = $DB->get_records_menu('capabilities', [], '', "id, name");
         $mform->addElement('autocomplete', 'capability', get_string('capabilities', 'local_configws'), $capoptions, ['multiple' => false]);
@@ -235,5 +260,26 @@ class autoconfig_form extends dynamic_form {
         }
         $mform->setDefault('functions', $wsdefaultfunctions);
         $mform->hideIf('functions', 'webservice', 'eq', 0);
+    }
+
+    /**
+     * Form validation.
+     * @param array $data The form data.
+     * @param array $files The form files.
+     * @return array The validated data.
+     */
+    public function validation($data, $files) {
+        $errors = parent::validation($data, $files);
+
+        if (empty($data['user'])) {
+            $errors['user'] = get_string('required');
+        }
+        if (empty($data['webservice'])) {
+            $errors['webservice'] = get_string('required');
+        }
+        if (empty($data['webservicename'])) {
+            $errors['webservicename'] = get_string('required');
+        }
+        return $errors;
     }
 }

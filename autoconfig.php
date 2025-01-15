@@ -47,5 +47,5 @@ $PAGE->requires->js_call_amd(
 );
 // Render output.
 echo $OUTPUT->header();
-
+echo $OUTPUT->single_button('', get_string('autoconfig', 'local_configws'), '', ['data-action' => 'autoconfig-form']);
 echo $OUTPUT->footer();
