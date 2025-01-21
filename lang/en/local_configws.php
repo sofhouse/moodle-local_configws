@@ -28,6 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Config Web Service';
 $string['autoconfig'] = 'Auto Config';
 $string['loadjson'] = 'Load JSON';
+$string['savejson'] = 'Save JSON';
 $string['user'] = 'User';
 $string['webservice'] = 'Web Service';
 $string['token'] = 'Token';

@@ -86,7 +86,15 @@ async function renderModal(formClass, user = false, webservice = false, target =
             });
         });
         if (selectAdded) {
+
             observer.disconnect();
+            // Add the save json button functionality.
+            let savejsonbutton = document.querySelector('.modal-body button[name="jsonsave"]');
+            savejsonbutton.addEventListener('click', () => {
+                let downloadlink = '/pluginfile.php/10/local_configws/download/' + webservice + '/?userid=' + user;
+                window.location.assign(downloadlink);
+            });
+
             // Select the event
             const select = document.querySelector('.modal-body select[name="webservice"]');
             const userid = document.querySelector('.modal-body select[name="user"]').value;
