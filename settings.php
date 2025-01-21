@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Settings for local_altai.
  *
  * @package     local_configws
  * @copyright   2024 Softhouse
@@ -25,9 +25,31 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2024100800;
-$plugin->requires = 2022112814;
-$plugin->release = '1.0.0';
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->component = 'local_configws';
-$plugin->supported = [401, 405];
+global $DB;
+
+if ($hassiteconfig) {
+    $pluginname = 'local_configws';
+
+    $ADMIN->add(
+        'localplugins',
+        new admin_category(
+            $pluginname,
+            new lang_string('pluginname', $pluginname)
+        )
+    );
+
+
+    // Add autoconfig page.
+    $urleventtypes = new moodle_url(
+        '/local/configws/autoconfig.php',
+        []
+    );
+    $ADMIN->add(
+        $pluginname,
+        new admin_externalpage(
+            'local_configws_autoconfig',
+            new lang_string('autoconfig', $pluginname),
+            $urleventtypes->out(false)
+        )
+    );
+}

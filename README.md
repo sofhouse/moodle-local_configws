@@ -1,2 +1,2 @@
-moodle-local_muse
+moodle-local_configws
 

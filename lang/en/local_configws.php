@@ -26,4 +26,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Config Web Service';
-
+$string['autoconfig'] = 'Auto Config';
+$string['loadjson'] = 'Load JSON';
+$string['user'] = 'User';
+$string['webservice'] = 'Web Service';
+$string['token'] = 'Token';
+$string['rolename'] = 'Role Name';
+$string['webservicename'] = 'Web Service Name';
+$string['wsshortname'] = 'WS Short Name';
+$string['roleshortname'] = 'Role Short Name';
+$string['capabilities'] = 'Capabilities';
+$string['enabled'] = 'Enable';
+$string['candownload'] = 'Can Download';
+$string['canupload'] = 'Can Upload';
+$string['functions'] = 'Functions';
