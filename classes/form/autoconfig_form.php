@@ -79,6 +79,8 @@ class autoconfig_form extends dynamic_form {
                 $wsobject->uploadfiles = $canupload;
                 $wsobject->timecreated = time();
                 $webserviceid = $DB->insert_record('external_services', $wsobject);
+            } else {
+                $webserviceid = $DB->get_field('external_services', 'id', ['shortname' => $wsshortname]);
             }
         } else {
             $wsobject = $DB->get_record('external_services', ['id' => $webservice]);
@@ -143,10 +145,61 @@ class autoconfig_form extends dynamic_form {
      * Sets the data to the dynamic form from the JS passed args.
      */
     public function set_data_for_dynamic_submission(): void {
-        $user = $this->optional_param('user', null, PARAM_INT);
-        $webservice = $this->optional_param('webservice', null, PARAM_INT);
-        $this->set_data(['user' => $user]);
-        $this->set_data(['webservice' => $webservice]);
+        global $DB;
+        $isjson = $this->optional_param('isjson', null, PARAM_INT);
+        $webservice = $this->optional_param('webservice', null, PARAM_ALPHANUM);
+        $defaultvalues = [];
+        if (!empty($isjson)) {
+            $useremail = $this->optional_param('email', null, PARAM_TEXT);
+            $user = $this->optional_param('userid', null, PARAM_INT);
+            $webservicename = $this->optional_param('name', null, PARAM_TEXT);
+            $capability = $this->optional_param('requiredcapability', null, PARAM_TEXT);
+            $enabled = $this->optional_param('enabled', null, PARAM_INT);
+            $candownload = $this->optional_param('downloadfiles', null, PARAM_INT);
+            $canupload = $this->optional_param('uploadfiles', null, PARAM_INT);
+            $functions = $this->optional_param('functions', null, PARAM_TEXT);
+            if (empty($useremail)) {
+                $defaultvalues['user'] = $user;
+            } else {
+                $user = $DB->get_field('user', 'id', ['email' => $useremail]);
+                $defaultvalues['user'] = $user;
+            }
+            $defaultvalues['webservice'] = $webservice;
+
+            if ($webservice == 'new') {
+                if (!empty($webservicename)) {
+                    $defaultvalues['webservicename'] = $webservicename;
+                }
+                if (!empty($capability)) {
+                    $capbid = $DB->get_field('capabilities', 'id', ['name' => $capability]);
+                    $defaultvalues['capability'] = $capbid;
+                }
+                if (!empty($enabled)) {
+                    $defaultvalues['enabled'] = $enabled;
+                }
+                if (!empty($candownload)) {
+                    $defaultvalues['candownload'] = $candownload;
+                }
+                if (!empty($canupload)) {
+                    $defaultvalues['canupload'] = $canupload;
+                }
+                if (!empty($functions)) {
+                        $explodedfunctions = explode(',', $functions);
+                        $functionsids = '';
+                        foreach ($explodedfunctions as $function) {
+                            $function = $DB->get_field('external_functions', 'id', ['name' => $function]);
+                            $functionsids .= $function . ','; 
+                        }
+                        $functionsids = rtrim($functionsids, ',');
+                        $defaultvalues['functions'] = $functionsids;
+                }
+            }
+        } else {
+            $user = $this->optional_param('user', null, PARAM_INT);
+            $defaultvalues['user'] = $user;
+            $defaultvalues['webservice'] = $webservice;
+        }
+        $this->set_data($defaultvalues);
     }
 
     /**
@@ -176,6 +229,7 @@ class autoconfig_form extends dynamic_form {
         $mform->addElement('autocomplete', 'user', get_string('user'), $users);
         
         $selecteduser = $this->optional_param('user', 0, PARAM_INT);
+        $mform->setDefault('user', $selecteduser);
         $wsoptions = [0 => get_string('select'), 'new' => get_string('new')];
         if ($selecteduser) {
             $userwsids = $DB->get_records('external_services_users', ['userid' => $selecteduser], '', 'id, externalserviceid as id');

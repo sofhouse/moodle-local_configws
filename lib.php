@@ -75,8 +75,11 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $serviceinfo->uploadfiles = $service->uploadfiles;
     $serviceinfo->requiredcapability = $service->requiredcapability;
     $serviceinfo->functions = array_values($servicefunctions);
+    $shortname = strtolower($serviceinfo->name);
+    $shortname = preg_replace('/[^a-z0-9]/', '', $shortname);
     $servicejson = json_encode($serviceinfo);
 
+    $filename = 'confiws-'. $user->username . '-' . $shortname . '.json';
     $context = context_system::instance();
     $fs = get_file_storage();
     $fr = array(
@@ -85,7 +88,7 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
         'filearea' => 'download',
         'itemid' => $serviceid,
         'filepath' => '/',
-        'filename' => 'service.json',
+        'filename' => $filename,
     );
     $file = $fs->get_file($fr['contextid'], $fr['component'], $fr['filearea'], $fr['itemid'], $fr['filepath'], $fr['filename']);
     if ($file) {
