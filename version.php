@@ -30,4 +30,4 @@ $plugin->requires = 2022112814;
 $plugin->release = '1.0.0';
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->component = 'local_configws';
-$plugin->supported = [401, 405];
+$plugin->supported = [405, 405];
