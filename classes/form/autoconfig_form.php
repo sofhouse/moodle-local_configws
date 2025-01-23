@@ -50,7 +50,7 @@ class autoconfig_form extends dynamic_form {
      * Processes the form submission.
      * @return mixed Response to be serialized and handled by amd.
      */
-    public function process_dynamic_submission() {
+    public function process_dynamic_submission(): array {
         global $DB;
         $data = $this->get_data();
 
@@ -214,7 +214,7 @@ class autoconfig_form extends dynamic_form {
     /**
      * Form definition.
      */
-    protected function definition() {
+    protected function definition(): void {
         global $DB;
         $mform = $this->_form;
 
@@ -331,7 +331,7 @@ class autoconfig_form extends dynamic_form {
      * @param array $files The form files.
      * @return array The validated data.
      */
-    public function validation($data, $files) {
+    public function validation($data, $files): array {
         $errors = parent::validation($data, $files);
 
         if (empty($data['user'])) {
