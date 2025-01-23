@@ -190,7 +190,7 @@ class autoconfig_form extends dynamic_form {
                     $functionsids = '';
                     foreach ($explodedfunctions as $function) {
                         $function = $DB->get_field('external_functions', 'id', ['name' => $function]);
-                        $functionsids .= $function . ','; 
+                        $functionsids .= $function . ',';
                     }
                     $functionsids = rtrim($functionsids, ',');
                     $defaultvalues['functions'] = $functionsids;
@@ -234,7 +234,7 @@ class autoconfig_form extends dynamic_form {
         $mform->setDefault('user', $selecteduser);
         $wsoptions = [0 => get_string('select'), 'new' => get_string('new')];
         if ($selecteduser) {
-            $userwsids = $DB->get_records('external_services_users', 
+            $userwsids = $DB->get_records('external_services_users',
                 ['userid' => $selecteduser], '', 'id, externalserviceid as id');
             foreach ($userwsids as $ws) {
                 $ws = $DB->get_record('external_services', ['id' => $ws->id]);
