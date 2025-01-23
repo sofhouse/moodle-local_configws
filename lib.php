@@ -59,7 +59,8 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $user = $DB->get_record('user', ['id' => $userid], '*');
 
     $service = $DB->get_record('external_services', ['id' => $serviceid], '*', MUST_EXIST);
-    $servicefunctions = $DB->get_records_menu('external_services_functions', ['externalserviceid' => $service->id], 'id', 'id, functionname');
+    $servicefunctions = $DB->get_records_menu('external_services_functions',
+        ['externalserviceid' => $service->id], 'id', 'id, functionname');
 
     $serviceinfo = new stdClass();
     $serviceinfo->serviceid = $serviceid;
@@ -93,7 +94,7 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $file = $fs->get_file($fr['contextid'], $fr['component'], $fr['filearea'], $fr['itemid'], $fr['filepath'], $fr['filename']);
     if ($file) {
         $file->delete();
-    }    
+    }
     // We create the file with the latest service info.
     $file = $fs->create_file_from_string($fr, $servicejson);
 
