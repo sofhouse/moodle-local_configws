@@ -173,8 +173,7 @@ class autoconfig_form extends dynamic_form {
                     $defaultvalues['webservicename'] = $webservicename;
                 }
                 if (!empty($capability)) {
-                    $capbid = $DB->get_field('capabilities', 'id', ['name' => $capability]);
-                    $defaultvalues['capability'] = $capbid;
+                    $defaultvalues['capability'] = $capability;
                 }
                 if (!empty($enabled)) {
                     $defaultvalues['enabled'] = $enabled;
@@ -219,7 +218,6 @@ class autoconfig_form extends dynamic_form {
         $mform = $this->_form;
 
         $mform->addElement('button', 'jsonload', get_string('loadjson', 'local_configws'));
-        $mform->addElement('button', 'jsonsave', get_string('savejson', 'local_configws'));
 
         $mform->addElement('hidden', 'disablealwaystrue', 1);
         $mform->setType('disablealwaystrue', PARAM_INT);
@@ -287,7 +285,12 @@ class autoconfig_form extends dynamic_form {
         $capoptions = $DB->get_records_menu('capabilities', [], '', "id, name");
         $mform->addElement('autocomplete', 'capability', get_string('capabilities', 'local_configws'),
             $capoptions, ['multiple' => false]);
-        $mform->setDefault('capability', $wsinfo->requiredcapability ?? '');
+        if (!empty($wsinfo->requiredcapability)) {
+            $defaultcapid = $DB->get_field('capabilities', 'id', ['name' => $wsinfo->requiredcapability]);
+        } else {
+            $defaultcapid = '';
+        }
+        $mform->setDefault('capability', $defaultcapid);
         $mform->hideIf('capability', 'webservice', 'eq', value: 0);
 
         $mform->addElement('checkbox', 'enabled', get_string('enabled', 'local_configws'));
@@ -321,8 +324,14 @@ class autoconfig_form extends dynamic_form {
         }
         $mform->setDefault('functions', $wsdefaultfunctions);
         $mform->hideIf('functions', 'webservice', 'eq', 0);
+
+        $mform->addElement('button', 'jsonsave', get_string('savejson', 'local_configws'));
         $mform->hideIf('jsonsave', 'webservice', 'eq', 0);
         $mform->hideIf('jsonsave', 'webservice', 'eq', 'new');
+
+        $mform->addElement('button', 'viewinexternal', get_string('viewinexternal', 'local_configws'));
+        $mform->hideIf('viewinexternal', 'webservice', 'eq', 0);
+        $mform->hideIf('viewinexternal', 'webservice', 'eq', 'new');
     }
 
     /**

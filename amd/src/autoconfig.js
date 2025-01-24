@@ -101,13 +101,20 @@ async function renderModal(formClass, user = false, webservice = false, target =
         if (selectAdded) {
 
             observer.disconnect();
-            // Add the save json button functionality.
-            let savejsonbutton = document.querySelector('.modal-body button[name="jsonsave"]');
-            savejsonbutton.addEventListener('click', () => {
-                let downloadlink = '/pluginfile.php/10/local_configws/download/' + webservice + '/?userid=' + user;
-                window.location.assign(downloadlink);
-            });
 
+            // Add the save json and view in external buttons
+            if (webservice !== false && webservice !== 'new') {
+                let savejsonbutton = document.querySelector('.modal-body button[name="jsonsave"]');
+                let viewinexternal = document.querySelector('.modal-body button[name="viewinexternal"]');
+                savejsonbutton.addEventListener('click', () => {
+                    let downloadlink = '/pluginfile.php/10/local_configws/download/' + webservice + '/?userid=' + user;
+                    window.location.assign(downloadlink);
+                });
+                viewinexternal.addEventListener('click', () => {
+                    let link = '/admin/settings.php?section=externalservices';
+                    window.open(link, '_blank');
+                });
+            }
             let loadjsonbutton = document.querySelector('.modal-body button[name="jsonload"]');
             loadjsonbutton.addEventListener('click', () => {
                 const input = document.createElement('input');
