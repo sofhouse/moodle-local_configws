@@ -41,9 +41,9 @@
  * @param array $args extra arguments
  * @param bool $forcedownload whether or not force download
  * @param array $options additional options affecting the file serving
- * @return void
+ * @return bool
  */
-function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []): void {
+function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []): bool {
     global $CFG, $DB;
 
     if ($context->id != CONTEXT_SYSTEM) {
@@ -99,4 +99,5 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $file = $fs->create_file_from_string($fr, $servicejson);
 
     send_stored_file($file, 0, 0, true);
+    exit;
 }
