@@ -287,8 +287,7 @@ class autoconfig_form extends dynamic_form {
             $capoptions, ['multiple' => false]);
         if (!empty($wsinfo->requiredcapability)) {
             $defaultcapid = $DB->get_field('capabilities', 'id', ['name' => $wsinfo->requiredcapability]);
-        }
-        else {
+        } else {
             $defaultcapid = '';
         }
         $mform->setDefault('capability', $defaultcapid);
