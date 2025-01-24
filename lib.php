@@ -17,7 +17,7 @@
 /**
  * Local configuration web services lib.
  *
- * @package     local_confiws
+ * @package     local_configws
  * @copyright   2024 Softhouse
  * @author      Oscar Nadjar <oscar.nadjar@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -41,9 +41,9 @@
  * @param array $args extra arguments
  * @param bool $forcedownload whether or not force download
  * @param array $options additional options affecting the file serving
- * @return bool false if file not found, does not return if found - just send the file
+ * @return void
  */
-function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
+function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []): void {
     global $CFG, $DB;
 
     if ($context->id != CONTEXT_SYSTEM) {
@@ -59,7 +59,8 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $user = $DB->get_record('user', ['id' => $userid], '*');
 
     $service = $DB->get_record('external_services', ['id' => $serviceid], '*', MUST_EXIST);
-    $servicefunctions = $DB->get_records_menu('external_services_functions', ['externalserviceid' => $service->id], 'id', 'id, functionname');
+    $servicefunctions = $DB->get_records_menu('external_services_functions',
+        ['externalserviceid' => $service->id], 'id', 'id, functionname');
 
     $serviceinfo = new stdClass();
     $serviceinfo->serviceid = $serviceid;
@@ -75,8 +76,11 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
     $serviceinfo->uploadfiles = $service->uploadfiles;
     $serviceinfo->requiredcapability = $service->requiredcapability;
     $serviceinfo->functions = array_values($servicefunctions);
+    $shortname = strtolower($serviceinfo->name);
+    $shortname = preg_replace('/[^a-z0-9]/', '', $shortname);
     $servicejson = json_encode($serviceinfo);
 
+    $filename = 'confiws-'. $user->username . '-' . $shortname . '.json';
     $context = context_system::instance();
     $fs = get_file_storage();
     $fr = array(
@@ -85,15 +89,14 @@ function local_configws_pluginfile($course, $cm, $context, $filearea, $args, $fo
         'filearea' => 'download',
         'itemid' => $serviceid,
         'filepath' => '/',
-        'filename' => 'service.json',
+        'filename' => $filename,
     );
     $file = $fs->get_file($fr['contextid'], $fr['component'], $fr['filearea'], $fr['itemid'], $fr['filepath'], $fr['filename']);
     if ($file) {
         $file->delete();
-    }    
+    }
     // We create the file with the latest service info.
     $file = $fs->create_file_from_string($fr, $servicejson);
 
     send_stored_file($file, 0, 0, true);
-    exit;
 }

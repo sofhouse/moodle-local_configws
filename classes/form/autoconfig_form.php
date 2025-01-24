@@ -31,7 +31,7 @@ use core_form\dynamic_form;
  */
 class autoconfig_form extends dynamic_form {
 
-     /**
+    /**
      * Gets context for submission
      * @return \context
      */
@@ -50,7 +50,7 @@ class autoconfig_form extends dynamic_form {
      * Processes the form submission.
      * @return mixed Response to be serialized and handled by amd.
      */
-    public function process_dynamic_submission() {
+    public function process_dynamic_submission(): array {
         global $DB;
         $data = $this->get_data();
 
@@ -79,6 +79,8 @@ class autoconfig_form extends dynamic_form {
                 $wsobject->uploadfiles = $canupload;
                 $wsobject->timecreated = time();
                 $webserviceid = $DB->insert_record('external_services', $wsobject);
+            } else {
+                $webserviceid = $DB->get_field('external_services', 'id', ['shortname' => $wsshortname]);
             }
         } else {
             $wsobject = $DB->get_record('external_services', ['id' => $webservice]);
@@ -119,8 +121,10 @@ class autoconfig_form extends dynamic_form {
         }
         foreach ($functions as $function) {
             $funtionaname = $DB->get_field('external_functions', 'name', ['id' => $function]);
-            if (!$DB->record_exists('external_services_functions', ['externalserviceid' => $webserviceid, 'functionname' => $funtionaname])) {
-                $DB->insert_record('external_services_functions', ['externalserviceid' => $webserviceid, 'functionname' => $funtionaname]);
+            if (!$DB->record_exists('external_services_functions',
+                ['externalserviceid' => $webserviceid, 'functionname' => $funtionaname])) {
+                $DB->insert_record('external_services_functions',
+                ['externalserviceid' => $webserviceid, 'functionname' => $funtionaname]);
             }
         }
         $token = $DB->get_field('external_tokens', 'token', ['userid' => $user, 'externalserviceid' => $webserviceid]);
@@ -143,10 +147,61 @@ class autoconfig_form extends dynamic_form {
      * Sets the data to the dynamic form from the JS passed args.
      */
     public function set_data_for_dynamic_submission(): void {
-        $user = $this->optional_param('user', null, PARAM_INT);
-        $webservice = $this->optional_param('webservice', null, PARAM_INT);
-        $this->set_data(['user' => $user]);
-        $this->set_data(['webservice' => $webservice]);
+        global $DB;
+        $isjson = $this->optional_param('isjson', null, PARAM_INT);
+        $webservice = $this->optional_param('webservice', null, PARAM_ALPHANUM);
+        $defaultvalues = [];
+        if (!empty($isjson)) {
+            $useremail = $this->optional_param('email', null, PARAM_TEXT);
+            $user = $this->optional_param('userid', null, PARAM_INT);
+            $webservicename = $this->optional_param('name', null, PARAM_TEXT);
+            $capability = $this->optional_param('requiredcapability', null, PARAM_TEXT);
+            $enabled = $this->optional_param('enabled', null, PARAM_INT);
+            $candownload = $this->optional_param('downloadfiles', null, PARAM_INT);
+            $canupload = $this->optional_param('uploadfiles', null, PARAM_INT);
+            $functions = $this->optional_param('functions', null, PARAM_TEXT);
+            if (empty($useremail)) {
+                $defaultvalues['user'] = $user;
+            } else {
+                $user = $DB->get_field('user', 'id', ['email' => $useremail]);
+                $defaultvalues['user'] = $user;
+            }
+            $defaultvalues['webservice'] = $webservice;
+
+            if ($webservice == 'new') {
+                if (!empty($webservicename)) {
+                    $defaultvalues['webservicename'] = $webservicename;
+                }
+                if (!empty($capability)) {
+                    $capbid = $DB->get_field('capabilities', 'id', ['name' => $capability]);
+                    $defaultvalues['capability'] = $capbid;
+                }
+                if (!empty($enabled)) {
+                    $defaultvalues['enabled'] = $enabled;
+                }
+                if (!empty($candownload)) {
+                    $defaultvalues['candownload'] = $candownload;
+                }
+                if (!empty($canupload)) {
+                    $defaultvalues['canupload'] = $canupload;
+                }
+                if (!empty($functions)) {
+                    $explodedfunctions = explode(',', $functions);
+                    $functionsids = '';
+                    foreach ($explodedfunctions as $function) {
+                        $function = $DB->get_field('external_functions', 'id', ['name' => $function]);
+                        $functionsids .= $function . ',';
+                    }
+                    $functionsids = rtrim($functionsids, ',');
+                    $defaultvalues['functions'] = $functionsids;
+                }
+            }
+        } else {
+            $user = $this->optional_param('user', null, PARAM_INT);
+            $defaultvalues['user'] = $user;
+            $defaultvalues['webservice'] = $webservice;
+        }
+        $this->set_data($defaultvalues);
     }
 
     /**
@@ -159,14 +214,12 @@ class autoconfig_form extends dynamic_form {
     /**
      * Form definition.
      */
-    protected function definition() {
+    protected function definition(): void {
         global $DB;
         $mform = $this->_form;
 
         $mform->addElement('button', 'jsonload', get_string('loadjson', 'local_configws'));
         $mform->addElement('button', 'jsonsave', get_string('savejson', 'local_configws'));
-        $mform->hideIf('jsonsave', 'webservice', 'eq', 0);
-        $mform->hideIf('jsonsave', 'webservice', 'eq', 'new');
 
         $mform->addElement('hidden', 'disablealwaystrue', 1);
         $mform->setType('disablealwaystrue', PARAM_INT);
@@ -174,11 +227,13 @@ class autoconfig_form extends dynamic_form {
         $users = [0 => get_string('select')];
         $users += $DB->get_records_menu('user', [], '', "id, concat(firstname,' ',lastname)");
         $mform->addElement('autocomplete', 'user', get_string('user'), $users);
-        
+
         $selecteduser = $this->optional_param('user', 0, PARAM_INT);
+        $mform->setDefault('user', $selecteduser);
         $wsoptions = [0 => get_string('select'), 'new' => get_string('new')];
         if ($selecteduser) {
-            $userwsids = $DB->get_records('external_services_users', ['userid' => $selecteduser], '', 'id, externalserviceid as id');
+            $userwsids = $DB->get_records('external_services_users',
+                ['userid' => $selecteduser], '', 'id, externalserviceid as id');
             foreach ($userwsids as $ws) {
                 $ws = $DB->get_record('external_services', ['id' => $ws->id]);
                 $wsoptions[$ws->id] = $ws->name;
@@ -194,7 +249,7 @@ class autoconfig_form extends dynamic_form {
 
         $mform->addElement('text', 'webservicename', get_string('webservicename', 'local_configws'), []);
         $mform->setType('webservicename', PARAM_TEXT);
-        $mform->disabledIf('webservicename', 'webservice', 'noteq','new');
+        $mform->disabledIf('webservicename', 'webservice', 'noteq', 'new');
         $mform->hideIf('webservicename', 'webservice', 'eq', 0);
         $mform->setDefault('webservicename', $wsinfo->name ?? '');
 
@@ -229,9 +284,9 @@ class autoconfig_form extends dynamic_form {
         $mform->setDefault('roleshortname', $wsinfo->shortname ?? '');
         $mform->disabledIf('roleshortname', 'webservice', 'noteq', -1);
 
-
         $capoptions = $DB->get_records_menu('capabilities', [], '', "id, name");
-        $mform->addElement('autocomplete', 'capability', get_string('capabilities', 'local_configws'), $capoptions, ['multiple' => false]);
+        $mform->addElement('autocomplete', 'capability', get_string('capabilities', 'local_configws'),
+            $capoptions, ['multiple' => false]);
         $mform->setDefault('capability', $wsinfo->requiredcapability ?? '');
         $mform->hideIf('capability', 'webservice', 'eq', value: 0);
 
@@ -249,9 +304,11 @@ class autoconfig_form extends dynamic_form {
 
         $functionoptions = $DB->get_records_menu('external_functions', [], '', "id, name");
         $wsdefaultfunctions = '';
-        $mform->addElement('autocomplete', 'functions', get_string('functions', 'local_configws'), $functionoptions, ['multiple' => true]);
+        $mform->addElement('autocomplete', 'functions', get_string('functions', 'local_configws'),
+            $functionoptions, ['multiple' => true]);
         if ($selectedws) {
-            $wsfunctions = $DB->get_records_menu('external_services_functions', ['externalserviceid' => $selectedws], '', 'id, functionname');
+            $wsfunctions = $DB->get_records_menu('external_services_functions', ['externalserviceid' => $selectedws],
+                '', 'id, functionname');
             if (!empty($wsfunctions)) {
                 foreach ($wsfunctions as $function) {
                     if (!empty($wsdefaultfunctions)) {
@@ -264,6 +321,8 @@ class autoconfig_form extends dynamic_form {
         }
         $mform->setDefault('functions', $wsdefaultfunctions);
         $mform->hideIf('functions', 'webservice', 'eq', 0);
+        $mform->hideIf('jsonsave', 'webservice', 'eq', 0);
+        $mform->hideIf('jsonsave', 'webservice', 'eq', 'new');
     }
 
     /**
@@ -272,7 +331,7 @@ class autoconfig_form extends dynamic_form {
      * @param array $files The form files.
      * @return array The validated data.
      */
-    public function validation($data, $files) {
+    public function validation($data, $files): array {
         $errors = parent::validation($data, $files);
 
         if (empty($data['user'])) {

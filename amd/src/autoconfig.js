@@ -18,15 +18,28 @@ export const init = (formClass) => {
  * @param {int} user
  * @param {int} webservice
  * @param {object} target
+ * @param {object} jsondata
  * @returns {void}
 */
-async function renderModal(formClass, user = false, webservice = false, target = false) {
+async function renderModal(formClass, user = false, webservice = false, target = false, jsondata = false) {
+    let args = {};
+    if (jsondata !== false) {
+        args = jsondata;
+        args.userid = user;
+        args.webservice = webservice;
+        if (args.functions !== undefined) {
+            args.functions = args.functions.join(',');
+        }
+        args.isjson = 1;
+    } else {
+        args = {
+            user: user,
+            webservice: webservice
+        };
+    }
     const form = new ModalForm({
         formClass,
-        args: {
-            user: user,
-            webservice: webservice,
-        },
+        args: args,
         modalConfig: {
             title: getString('autoconfig', 'local_configws'),
         },
@@ -95,6 +108,30 @@ async function renderModal(formClass, user = false, webservice = false, target =
                 window.location.assign(downloadlink);
             });
 
+            let loadjsonbutton = document.querySelector('.modal-body button[name="jsonload"]');
+            loadjsonbutton.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json';
+                input.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            const jsonContent = e.target.result;
+                            const data = JSON.parse(jsonContent);
+                            if (!validateJson(data)) {
+                                alert('Invalid JSON file');
+                                return;
+                            }
+                            form.modal.destroy();
+                            await renderModal(formClass, data.userid, 'new', target, data);
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+                input.click();
+            });
             // Select the event
             const select = document.querySelector('.modal-body select[name="webservice"]');
             const userid = document.querySelector('.modal-body select[name="user"]').value;
@@ -111,4 +148,25 @@ async function renderModal(formClass, user = false, webservice = false, target =
 
     // Start observing the body for mutations
     wsobserver.observe(bodymodal, { childList: true, subtree: true });
+}
+
+/**
+ * Validate json file.
+ * @param {object} data
+ */
+function validateJson(data) {
+    if (typeof data !== 'object') {
+        return false;
+    }
+    if (data === null) {
+        return false;
+    }
+    if (data.userid === undefined) {
+        return false;
+    }
+    if (data.name === undefined) {
+        return false;
+    }
+
+    return true;
 }

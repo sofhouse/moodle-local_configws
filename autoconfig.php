@@ -17,7 +17,7 @@
 /**
  * Autoconfig page.
  *
- * @package     local_confiws
+ * @package     local_configws
  * @copyright   2024 Softhouse
  * @author      Oscar Nadjar <oscar.nadjar@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
