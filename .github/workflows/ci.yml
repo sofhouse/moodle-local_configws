@@ -10,4 +10,5 @@ jobs:
     #   # Required if you plan to publish (uncomment the below)
     #   moodle_org_token: ${{ secrets.MOODLE_ORG_TOKEN }}
     with:
+      disable_phpunit: true
       disable_release : true
